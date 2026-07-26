@@ -252,11 +252,10 @@ button {
 
 .tb__result h2 {
   margin: 8px 0 1px;
-  font-size: 72px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 300;
+  font-size: clamp(40px, 12vw, 58px);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.09em;
+  letter-spacing: -0.045em;
 }
 
 .tb__result button,

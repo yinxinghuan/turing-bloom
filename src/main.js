@@ -23,11 +23,12 @@ import './style.css'
 
 const app = document.querySelector('#app')
 const canvas = document.querySelector('#field')
-const timerEl = document.querySelector('#timer')
+const maturityEl = document.querySelector('#maturity')
 const demoEl = document.querySelector('#demo')
 const gestureEl = document.querySelector('#gesture')
 const resultEl = document.querySelector('#result')
-const resultScoreEl = document.querySelector('#result-score')
+const resultSpeciesEl = document.querySelector('#result-species')
+const resultDetailEl = document.querySelector('#result-detail')
 const resetButton = document.querySelector('#reset')
 const againButton = document.querySelector('#again')
 const errorEl = document.querySelector('#error')
@@ -83,12 +84,11 @@ let isVisible = false
 let hasInteracted = false
 let hasShownGesture = false
 let phase = 'idle'
-let startedAt = 0
-let pausedAt = 0
-let pausedDuration = 0
 let pathDistance = 0
 let lastSoloPoint = null
-let lastTimeShown = 25
+let lastMaturity = 0
+let lastInputAt = 0
+let maturityTonePlayed = false
 let audioContext = null
 
 const SIM_SCALE = innerWidth <= 430 ? 1.55 : 1.35
@@ -227,13 +227,13 @@ function resetSimulation() {
   resizeSimulation(true)
   hasInteracted = false
   phase = 'idle'
-  startedAt = 0
-  pausedDuration = 0
   pathDistance = 0
   lastSoloPoint = null
-  lastTimeShown = 25
+  lastMaturity = 0
+  lastInputAt = 0
+  maturityTonePlayed = false
   visitedZones.clear()
-  timerEl.textContent = '25'
+  maturityEl.textContent = '00'
   demoEl.hidden = false
   resultEl.hidden = true
   gestureEl.classList.remove('tb__hidden-gesture--show')
@@ -263,8 +263,7 @@ function tone(frequency, duration, delay = 0, volume = 0.012) {
 function beginIncubation() {
   if (phase !== 'idle') return
   phase = 'running'
-  startedAt = performance.now()
-  pausedDuration = 0
+  lastInputAt = performance.now()
   demoEl.hidden = true
   tone(92, 0.18, 0, 0.018)
 }
@@ -272,24 +271,31 @@ function beginIncubation() {
 function finishIncubation() {
   if (phase !== 'running') return
   phase = 'result'
-  const score = Math.min(999, Math.round(Math.min(pathDistance, 1600) * 0.32 + visitedZones.size * 62))
-  resultScoreEl.textContent = String(score).padStart(3, '0')
+  const species = visitedZones.size >= 7
+    ? 'LABYRINTH'
+    : pathDistance >= 760
+      ? 'CORAL'
+      : 'CELLULAR'
+  resultSpeciesEl.textContent = species
+  resultDetailEl.textContent = `${String(visitedZones.size).padStart(2, '0')} ZONES / STABLE`
   resultEl.hidden = false
   tone(330, 0.26, 0, 0.014)
   tone(440, 0.26, 0.09, 0.014)
   tone(660, 0.26, 0.18, 0.014)
 }
 
-function updateTimer(now) {
+function updateMaturity(now) {
   if (phase !== 'running') return
-  const elapsed = now - startedAt - pausedDuration
-  const remaining = Math.max(0, 25 - elapsed / 1000)
-  const display = Math.ceil(remaining)
-  if (display !== lastTimeShown) {
-    lastTimeShown = display
-    timerEl.textContent = String(display).padStart(2, '0')
+  const maturity = Math.min(100, Math.round(Math.min(pathDistance, 1600) * 0.12 + visitedZones.size * 12))
+  if (maturity !== lastMaturity) {
+    lastMaturity = maturity
+    maturityEl.textContent = String(maturity).padStart(2, '0')
   }
-  if (remaining <= 0) finishIncubation()
+  if (maturity >= 100 && !maturityTonePlayed) {
+    maturityTonePlayed = true
+    tone(260, 0.12, 0, 0.008)
+  }
+  if (maturity >= 100 && activePointers.size === 0 && now - lastInputAt >= 1800) finishIncubation()
 }
 
 function seedAt(clientX, clientY, diameter = 34, isDemo = false) {
@@ -376,6 +382,7 @@ function showHiddenGestureHint() {
 function onPointerDown(event) {
   if (phase === 'result') return
   event.preventDefault()
+  lastInputAt = performance.now()
   canvas.setPointerCapture?.(event.pointerId)
   activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
   if (activePointers.size === 2) {
@@ -399,6 +406,7 @@ function onPointerMove(event) {
     demoEl.hidden = true
     const distance = Math.hypot(event.clientX - previous.x, event.clientY - previous.y)
     pathDistance += Math.min(distance, 80)
+    lastInputAt = performance.now()
     seedAt(event.clientX, event.clientY)
     lastSoloPoint = { x: event.clientX, y: event.clientY }
     return
@@ -422,6 +430,7 @@ function onPointerEnd(event) {
     lastSoloPoint = { ...point }
   } else if (activePointers.size === 0) {
     lastSoloPoint = null
+    lastInputAt = performance.now()
   }
 }
 
@@ -446,7 +455,7 @@ function loop(now) {
     composer.step({ program: reactionProgram, input: state, output: state })
   }
   composer.step({ program: renderProgram, input: state })
-  updateTimer(now)
+  updateMaturity(now)
   frameId = requestAnimationFrame(loop)
 }
 
@@ -462,12 +471,7 @@ function setVisibility(visible) {
   if (!visible) {
     cancelAnimationFrame(frameId)
     frameId = 0
-    if (phase === 'running') pausedAt = performance.now()
   } else {
-    if (phase === 'running' && pausedAt) {
-      pausedDuration += performance.now() - pausedAt
-      pausedAt = 0
-    }
     requestLoop()
   }
 }
@@ -476,12 +480,7 @@ function onDocumentVisibility() {
   if (document.hidden) {
     cancelAnimationFrame(frameId)
     frameId = 0
-    if (phase === 'running') pausedAt = performance.now()
   } else {
-    if (phase === 'running' && pausedAt) {
-      pausedDuration += performance.now() - pausedAt
-      pausedAt = 0
-    }
     requestLoop()
   }
 }

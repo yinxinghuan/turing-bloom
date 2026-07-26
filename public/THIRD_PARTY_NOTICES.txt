@@ -13,8 +13,8 @@ License: MIT
 
 The AlterU adaptation preserves the Gray-Scott reaction-diffusion shader,
 parameter-space mapping, GPU ping-pong simulation, touch seeding, and view
-transform concepts. It adds mobile composition, onboarding, a timed result
-loop, synthesized feedback, and offscreen resource suspension.
+transform concepts. It adds mobile composition, onboarding, a gesture-driven
+specimen maturity loop, synthesized feedback, and offscreen resource suspension.
 
 MIT License
 
