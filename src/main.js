@@ -23,14 +23,11 @@ import './style.css'
 
 const app = document.querySelector('#app')
 const canvas = document.querySelector('#field')
-const maturityEl = document.querySelector('#maturity')
+const liveLabelEl = document.querySelector('#live-label')
+const liveDetailEl = document.querySelector('#live-detail')
 const demoEl = document.querySelector('#demo')
 const gestureEl = document.querySelector('#gesture')
-const resultEl = document.querySelector('#result')
-const resultSpeciesEl = document.querySelector('#result-species')
-const resultDetailEl = document.querySelector('#result-detail')
 const resetButton = document.querySelector('#reset')
-const againButton = document.querySelector('#again')
 const errorEl = document.querySelector('#error')
 const retryButton = document.querySelector('#retry')
 
@@ -40,21 +37,24 @@ const copy = zh
       canvas: '可触摸的反应扩散生长场',
       reset: '重新开始',
       gesture: '双指移动 · 缩放参数空间',
-      again: '再培养一次',
+      liveLabel: '活体培养',
+      liveDetail: '持续生长',
       error: '这台设备暂时无法培养这片纹样',
     }
   : {
       canvas: 'Interactive reaction diffusion field',
       reset: 'Reset',
       gesture: 'Two fingers move · zoom parameter space',
-      again: 'Grow again',
+      liveLabel: 'LIVE FIELD',
+      liveDetail: 'OPEN CULTURE',
       error: 'This device cannot grow the field yet',
     }
 
 canvas.setAttribute('aria-label', copy.canvas)
 resetButton.setAttribute('aria-label', copy.reset)
 gestureEl.textContent = copy.gesture
-againButton.textContent = copy.again
+liveLabelEl.textContent = copy.liveLabel
+liveDetailEl.textContent = copy.liveDetail
 errorEl.querySelector('p').textContent = copy.error
 
 const PARAMS_DEFAULT = Object.freeze({
@@ -83,12 +83,6 @@ let pinchState = null
 let isVisible = false
 let hasInteracted = false
 let hasShownGesture = false
-let phase = 'idle'
-let pathDistance = 0
-let lastSoloPoint = null
-let lastMaturity = 0
-let lastInputAt = 0
-let maturityTonePlayed = false
 let audioContext = null
 
 const SIM_SCALE = innerWidth <= 430 ? 1.55 : 1.35
@@ -226,16 +220,8 @@ function resetSimulation() {
   updateBounds()
   resizeSimulation(true)
   hasInteracted = false
-  phase = 'idle'
-  pathDistance = 0
-  lastSoloPoint = null
-  lastMaturity = 0
-  lastInputAt = 0
-  maturityTonePlayed = false
   visitedZones.clear()
-  maturityEl.textContent = '00'
   demoEl.hidden = false
-  resultEl.hidden = true
   gestureEl.classList.remove('tb__hidden-gesture--show')
 }
 
@@ -260,42 +246,11 @@ function tone(frequency, duration, delay = 0, volume = 0.012) {
   }
 }
 
-function beginIncubation() {
-  if (phase !== 'idle') return
-  phase = 'running'
-  lastInputAt = performance.now()
+function beginInteraction() {
+  if (hasInteracted) return
+  hasInteracted = true
   demoEl.hidden = true
   tone(92, 0.18, 0, 0.018)
-}
-
-function finishIncubation() {
-  if (phase !== 'running') return
-  phase = 'result'
-  const species = visitedZones.size >= 7
-    ? 'LABYRINTH'
-    : pathDistance >= 760
-      ? 'CORAL'
-      : 'CELLULAR'
-  resultSpeciesEl.textContent = species
-  resultDetailEl.textContent = `${String(visitedZones.size).padStart(2, '0')} ZONES / STABLE`
-  resultEl.hidden = false
-  tone(330, 0.26, 0, 0.014)
-  tone(440, 0.26, 0.09, 0.014)
-  tone(660, 0.26, 0.18, 0.014)
-}
-
-function updateMaturity(now) {
-  if (phase !== 'running') return
-  const maturity = Math.min(100, Math.round(Math.min(pathDistance, 1600) * 0.12 + visitedZones.size * 12))
-  if (maturity !== lastMaturity) {
-    lastMaturity = maturity
-    maturityEl.textContent = String(maturity).padStart(2, '0')
-  }
-  if (maturity >= 100 && !maturityTonePlayed) {
-    maturityTonePlayed = true
-    tone(260, 0.12, 0, 0.008)
-  }
-  if (maturity >= 100 && activePointers.size === 0 && now - lastInputAt >= 1800) finishIncubation()
 }
 
 function seedAt(clientX, clientY, diameter = 34, isDemo = false) {
@@ -380,35 +335,26 @@ function showHiddenGestureHint() {
 }
 
 function onPointerDown(event) {
-  if (phase === 'result') return
   event.preventDefault()
-  lastInputAt = performance.now()
   canvas.setPointerCapture?.(event.pointerId)
   activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
   if (activePointers.size === 2) {
     pinchState = twoPointerMetrics()
-    lastSoloPoint = null
     showHiddenGestureHint()
   } else {
-    lastSoloPoint = { x: event.clientX, y: event.clientY }
+    beginInteraction()
+    seedAt(event.clientX, event.clientY)
   }
 }
 
 function onPointerMove(event) {
-  if (!activePointers.has(event.pointerId) || phase === 'result') return
+  if (!activePointers.has(event.pointerId)) return
   event.preventDefault()
-  const previous = activePointers.get(event.pointerId)
   activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
 
   if (activePointers.size === 1) {
-    if (!hasInteracted) hasInteracted = true
-    beginIncubation()
-    demoEl.hidden = true
-    const distance = Math.hypot(event.clientX - previous.x, event.clientY - previous.y)
-    pathDistance += Math.min(distance, 80)
-    lastInputAt = performance.now()
+    beginInteraction()
     seedAt(event.clientX, event.clientY)
-    lastSoloPoint = { x: event.clientX, y: event.clientY }
     return
   }
 
@@ -425,17 +371,10 @@ function onPointerMove(event) {
 function onPointerEnd(event) {
   activePointers.delete(event.pointerId)
   if (activePointers.size !== 2) pinchState = null
-  if (activePointers.size === 1) {
-    const point = [...activePointers.values()][0]
-    lastSoloPoint = { ...point }
-  } else if (activePointers.size === 0) {
-    lastSoloPoint = null
-    lastInputAt = performance.now()
-  }
 }
 
 function injectDemo(now) {
-  if (hasInteracted || phase !== 'idle' || reducedMotion) return
+  if (hasInteracted || reducedMotion) return
   const rect = canvas.getBoundingClientRect()
   const cycle = (now % 3600) / 3600
   if (cycle < 0.16 || cycle > 0.78) return
@@ -450,12 +389,10 @@ function loop(now) {
   if (!isVisible || document.hidden || !composer) return
 
   injectDemo(now)
-  const steps = phase === 'result' ? Math.max(3, Math.floor(STEPS_PER_FRAME / 2)) : STEPS_PER_FRAME
-  for (let i = 0; i < steps; i += 1) {
+  for (let i = 0; i < STEPS_PER_FRAME; i += 1) {
     composer.step({ program: reactionProgram, input: state, output: state })
   }
   composer.step({ program: renderProgram, input: state })
-  updateMaturity(now)
   frameId = requestAnimationFrame(loop)
 }
 
@@ -510,10 +447,6 @@ function init() {
     })
 
     resetButton.addEventListener('pointerdown', (event) => {
-      event.stopPropagation()
-      resetSimulation()
-    })
-    againButton.addEventListener('pointerdown', (event) => {
       event.stopPropagation()
       resetSimulation()
     })

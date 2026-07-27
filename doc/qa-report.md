@@ -1,16 +1,30 @@
 # Turing Bloom 视觉 QA
 
-## Evidence
+## 证据
 
-- `_qa/ui/maturity-390x844-first-pass.png.png`：成熟度 0 的核心模拟。
-- `_qa/ui/maturity-result-390x844-recheck.png.png`：九区播种后达到 100 并生成 LABYRINTH 标本。
-- `_qa/ui/narrow-320x568-recheck.png.png`：短屏幽灵手指与成熟度 HUD。
+- `_qa/ui/endless-idle-390x844.png`：390×844 自动生长与幽灵手指引导。
+- `_qa/ui/endless-after-long-play-390x844.png`：覆盖九区、等待超过旧结算阈值、再次交互后的开放培养场。
+- `_qa/ui/endless-idle-320x568.png`：320×568 窄屏空闲态。
+- `_qa/ui/endless-after-long-play-320x568.png`：320×568 长时间重复交互态。
+- `_qa/ui/maturity-result-390x844-recheck.png.png`：改造前的强制成熟结算对照。
 
-## Findings and recheck
+## 验证
 
-- P1：旧版固定 25 秒会中断正在探索的参数纹样。已移除计时器，改为轨迹与区域共同推进成熟度。
-- 390×844 自动操作覆盖九区后得到 `100% MATURE / LABYRINTH / 09 ZONES`，结算卡不遮住重置按钮。
-- 320×568 无横向溢出；标题、成熟度、重置、署名和真实化学演示均可见。
-- 静态 UI audit 无 Emoji 或图标体系违规；游戏脚本无 page error。
+- 两个尺寸均不存在 `#result` / `.tb__result` 与 `#maturity` / `.tb__timer` 节点。
+- 自动操作覆盖九区后等待 3.2 秒，再次绘制仍成功；没有输入锁、完成遮罩或降速阶段。
+- 390×844 与 320×568 均无横向或纵向页面溢出，重置按钮维持 48×48 px。
+- WebGL 初始化成功，页面无错误覆盖层；右上显示“活体培养 / 持续生长”而非局内进度。
 
-最终评分：Hierarchy 4、Coherence 5、Readability 4、Game feel 5、Asset quality 5、Responsive UX 4、Polish 4，平均 4.43。
+## 评分
+
+| 维度 | 分数 |
+|---|---:|
+| 层级 | 5 |
+| 一致性 | 5 |
+| 可读性 | 4 |
+| 游戏手感 | 4 |
+| 素材质量 | 5 |
+| 响应式体验 | 4 |
+| 完成度 | 4 |
+
+平均分 `4.43 / 5`，没有低于 3 分的项目。保留 9 px 科学状态标签是既有视觉方向中的非交互微型标记例外。

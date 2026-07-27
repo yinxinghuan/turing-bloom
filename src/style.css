@@ -92,23 +92,40 @@ button {
   z-index: 2;
   top: max(86px, calc(env(safe-area-inset-top) + 74px));
   right: 20px;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 7px auto;
+  column-gap: 8px;
+  align-items: center;
+  justify-items: end;
   pointer-events: none;
 }
 
-.tb__timer {
-  font-size: 26px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  letter-spacing: -0.05em;
+.tb__live-dot {
+  grid-row: 1 / span 2;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d9ff72;
+  box-shadow: 0 0 0 3px rgba(217, 255, 114, 0.12);
+  animation: tb-live-breathe 2.8s ease-in-out infinite;
 }
 
-.tb__timer-unit {
-  color: rgba(238, 240, 232, 0.54);
+.tb__live-label,
+.tb__live-detail {
+  display: block;
   font-size: 9px;
-  letter-spacing: 0.16em;
+  line-height: 1.25;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.tb__live-label {
+  color: rgba(238, 240, 232, 0.84);
+  font-weight: 700;
+}
+
+.tb__live-detail {
+  color: rgba(238, 240, 232, 0.46);
 }
 
 .tb__reset {
@@ -137,7 +154,6 @@ button {
 }
 
 .tb__reset:focus-visible,
-.tb__result button:focus-visible,
 .tb__error button:focus-visible {
   outline: 2px solid #d9ff72;
   outline-offset: 3px;
@@ -221,44 +237,6 @@ button {
   animation: tb-demo-press 3.6s ease-in-out infinite;
 }
 
-.tb__result {
-  position: absolute;
-  z-index: 5;
-  top: 50%;
-  left: 50%;
-  width: min(74vw, 292px);
-  padding: 27px 20px 23px;
-  border-top: 1px solid rgba(238, 240, 232, 0.72);
-  border-bottom: 1px solid rgba(238, 240, 232, 0.72);
-  background: rgba(7, 9, 12, 0.8);
-  text-align: center;
-  transform: translate(-50%, -50%);
-  backdrop-filter: blur(7px);
-  animation: tb-result-in 420ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
-}
-
-.tb__result[hidden] {
-  display: none;
-}
-
-.tb__result p,
-.tb__result span {
-  display: block;
-  margin: 0;
-  color: rgba(238, 240, 232, 0.64);
-  font-size: 9px;
-  letter-spacing: 0.22em;
-}
-
-.tb__result h2 {
-  margin: 8px 0 1px;
-  font-size: clamp(40px, 12vw, 58px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.045em;
-}
-
-.tb__result button,
 .tb__error button {
   min-width: 148px;
   min-height: 46px;
@@ -274,7 +252,6 @@ button {
   transition: color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
-.tb__result button:active,
 .tb__error button:active {
   color: #07090c;
   background: #eef0e8;
@@ -366,14 +343,15 @@ button {
   }
 }
 
-@keyframes tb-result-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, calc(-50% + 16px));
+@keyframes tb-live-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.78);
   }
-  to {
+  50% {
     opacity: 1;
-    transform: translate(-50%, -50%);
+    transform: scale(1);
   }
 }
 
@@ -425,13 +403,12 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .tb__demo-finger,
   .tb__demo-finger svg,
-  .tb__result {
+  .tb__live-dot {
     animation: none;
   }
 
   .tb__reset,
   .tb__hidden-gesture,
-  .tb__result button,
   .tb__error button {
     transition: none;
   }
